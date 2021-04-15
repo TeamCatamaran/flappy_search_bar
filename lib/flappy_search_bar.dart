@@ -16,22 +16,23 @@ mixin _ControllerListener<T> on State<SearchBar<T>> {
 
   void onClear() {}
 
-  void onError(Error error) {}
+  void onError(Object error) {}
 }
 
 class SearchBarController<T> {
   final List<T> _list = [];
   final List<T> _filteredList = [];
   final List<T> _sortedList = [];
-  TextEditingController _searchQueryController;
-  String _lastSearchedText;
-  Future<List<T>> Function(String text) _lastSearchFunction;
-  _ControllerListener _controllerListener;
-  int Function(T a, T b) _lastSorting;
-  CancelableOperation _cancelableOperation;
-  int minimumChars;
+  TextEditingController? _searchQueryController;
+  String? _lastSearchedText;
+  Future<List<T>> Function(String text)? _lastSearchFunction;
+  _ControllerListener? _controllerListener;
+  int Function(T a, T b)? _lastSorting;
+  CancelableOperation? _cancelableOperation;
+  int? minimumChars;
 
-  void setTextController(TextEditingController _searchQueryController, minimunChars) {
+  void setTextController(
+      TextEditingController _searchQueryController, minimunChars) {
     this._searchQueryController = _searchQueryController;
     this.minimumChars = minimunChars;
   }
@@ -49,16 +50,16 @@ class SearchBarController<T> {
     _controllerListener?.onLoading();
     try {
       if (_cancelableOperation != null &&
-          (!_cancelableOperation.isCompleted ||
-              !_cancelableOperation.isCanceled)) {
-        _cancelableOperation.cancel();
+          (!_cancelableOperation!.isCompleted ||
+              !_cancelableOperation!.isCanceled)) {
+        _cancelableOperation!.cancel();
       }
       _cancelableOperation = CancelableOperation.fromFuture(
         onSearch(text),
         onCancel: () => {},
       );
 
-      final List<T> items = await _cancelableOperation.value;
+      final List<T> items = await _cancelableOperation!.value;
       _lastSearchFunction = onSearch;
       _lastSearchedText = text;
       _list.clear();
@@ -73,16 +74,18 @@ class SearchBarController<T> {
   }
 
   void injectSearch(
-      String searchText, Future<List<T>> Function(String text) onSearch) {
-    if (searchText != null && searchText.length >= minimumChars) {
-      _searchQueryController.text = searchText;
+      String? searchText, Future<List<T>> Function(String text) onSearch) {
+    if (searchText != null &&
+        searchText.length >= (minimumChars ?? 0) &&
+        _searchQueryController != null) {
+      _searchQueryController!.text = searchText;
       _search(searchText, onSearch);
     }
   }
 
   void replayLastSearch() {
     if (_lastSearchFunction != null && _lastSearchedText != null) {
-      _search(_lastSearchedText, _lastSearchFunction);
+      _search(_lastSearchedText!, _lastSearchFunction!);
     }
   }
 
@@ -134,7 +137,7 @@ class SearchBar<T> extends StatefulWidget {
   final List<T> suggestions;
 
   /// Callback returning the widget corresponding to a Suggestion item
-  final Widget Function(T item, int index) buildSuggestion;
+  final Widget Function(T item, int index)? buildSuggestion;
 
   /// Minimum number of chars required for a search
   final int minimumChars;
@@ -143,7 +146,7 @@ class SearchBar<T> extends StatefulWidget {
   final Widget Function(T item, int index) onItemFound;
 
   /// Callback returning the widget corresponding to an Error while searching
-  final Widget Function(Error error) onError;
+  final Widget Function(Object error)? onError;
 
   /// Cooldown between each call to avoid too many
   final Duration debounceDuration;
@@ -155,13 +158,13 @@ class SearchBar<T> extends StatefulWidget {
   final Widget emptyWidget;
 
   /// Widget to show by default
-  final Widget placeHolder;
+  final Widget? placeHolder;
 
   /// Widget showed on left of the search bar
   final Widget icon;
 
   /// Widget placed between the search bar and the results
-  final Widget header;
+  final Widget? header;
 
   /// Hint text of the search bar
   final String hintText;
@@ -179,10 +182,10 @@ class SearchBar<T> extends StatefulWidget {
   final Widget cancellationWidget;
 
   /// Callback when cancel button is triggered
-  final VoidCallback onCancelled;
+  final VoidCallback? onCancelled;
 
   /// Controller used to be able to sort, filter or replay the search
-  final SearchBarController searchBarController;
+  final SearchBarController? searchBarController;
 
   /// Enable to edit the style of the search bar
   final SearchBarStyle searchBarStyle;
@@ -195,7 +198,7 @@ class SearchBar<T> extends StatefulWidget {
 
   /// Called to get the tile at the specified index for the
   /// [SliverGridStaggeredTileLayout].
-  final IndexedScaledTileBuilder indexedScaledTileBuilder;
+  final IndexedScaledTileBuilder? indexedScaledTileBuilder;
 
   /// Set the scrollDirection
   final Axis scrollDirection;
@@ -216,9 +219,9 @@ class SearchBar<T> extends StatefulWidget {
   final EdgeInsetsGeometry listPadding;
 
   SearchBar({
-    Key key,
-    @required this.onSearch,
-    @required this.onItemFound,
+    Key? key,
+    required this.onSearch,
+    required this.onItemFound,
     this.searchBarController,
     this.minimumChars = 3,
     this.debounceDuration = const Duration(milliseconds: 500),
@@ -255,20 +258,21 @@ class SearchBar<T> extends StatefulWidget {
 class _SearchBarState<T> extends State<SearchBar<T>>
     with TickerProviderStateMixin, _ControllerListener<T> {
   bool _loading = false;
-  Widget _error;
+  Widget? _error;
   final _searchQueryController = TextEditingController();
-  Timer _debounce;
+  Timer? _debounce;
   bool _animate = false;
   List<T> _list = [];
-  SearchBarController searchBarController;
+  SearchBarController? searchBarController;
 
   @override
   void initState() {
     super.initState();
     searchBarController =
         widget.searchBarController ?? SearchBarController<T>();
-    searchBarController.setListener(this);
-    searchBarController.setTextController(_searchQueryController, widget.minimumChars);
+    searchBarController!.setListener(this);
+    searchBarController!
+        .setTextController(_searchQueryController, widget.minimumChars);
   }
 
   @override
@@ -294,21 +298,21 @@ class _SearchBarState<T> extends State<SearchBar<T>>
   }
 
   @override
-  void onError(Error error) {
+  void onError(Object error) {
     setState(() {
       _loading = false;
-      _error = widget.onError != null ? widget.onError(error) : Text("error");
+      _error = widget.onError != null ? widget.onError!(error) : Text("error");
     });
   }
 
   _onTextChanged(String newText) async {
     if (_debounce?.isActive ?? false) {
-      _debounce.cancel();
+      _debounce!.cancel();
     }
 
     _debounce = Timer(widget.debounceDuration, () async {
       if (newText.length >= widget.minimumChars && widget.onSearch != null) {
-        searchBarController._search(newText, widget.onSearch);
+        searchBarController!._search(newText, widget.onSearch);
       } else {
         setState(() {
           _list.clear();
@@ -322,7 +326,7 @@ class _SearchBarState<T> extends State<SearchBar<T>>
 
   void _cancel() {
     if (widget.onCancelled != null) {
-      widget.onCancelled();
+      widget.onCancelled!();
     }
 
     setState(() {
@@ -357,11 +361,11 @@ class _SearchBarState<T> extends State<SearchBar<T>>
 
   Widget _buildContent(BuildContext context) {
     if (_error != null) {
-      return _error;
+      return _error!;
     } else if (_loading) {
       return widget.loader;
     } else if (_searchQueryController.text.length < widget.minimumChars) {
-      if (widget.placeHolder != null) return widget.placeHolder;
+      if (widget.placeHolder != null) return widget.placeHolder!;
       return _buildListView(
           widget.suggestions, widget.buildSuggestion ?? widget.onItemFound);
     } else if (_list.isNotEmpty) {
