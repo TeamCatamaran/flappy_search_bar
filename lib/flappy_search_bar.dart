@@ -394,6 +394,7 @@ class _SearchBarState<T> extends State<SearchBar<T>>
                     width: _animate ? widthMax * .8 : widthMax,
                     decoration: BoxDecoration(
                       borderRadius: widget.searchBarStyle.borderRadius,
+                      boxShadow: widget.searchBarStyle.boxShadow,
                       color: widget.searchBarStyle.backgroundColor,
                     ),
                     child: Padding(
